@@ -1,0 +1,341 @@
+:root {
+  --desk: #c5d0c9;
+  --sheet: #e7eeea;
+  --ink: #1a2420;
+  --muted: #5e6e68;
+  --lamp: #e07a32;
+  --zhou: #1f6b58;
+  --sato: #2c4c7c;
+  --reveal: #d5e0da;
+  --line: #f7faf8;
+  --ui: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --jp: "BIZ UDPGothic", "Yu Gothic", "Yu Gothic UI", Meiryo, sans-serif;
+  color: var(--ink);
+  background: var(--desk);
+  font-family: var(--ui);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.sheet {
+  width: min(42rem, calc(100% - 2rem));
+  margin: 2.5rem auto 3rem;
+  padding: 2rem 1.35rem 2.4rem;
+  background: var(--sheet);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+h1 {
+  margin: 0.85rem 0 0;
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+}
+
+.pager {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.pager button {
+  min-height: 40px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.pager button[aria-selected="true"] {
+  background: var(--ink);
+  color: var(--sheet);
+}
+
+.scene {
+  margin: 1rem 0 0;
+  max-width: 38rem;
+  font-size: 1.02rem;
+  line-height: 1.75;
+}
+
+.hint {
+  margin: 0.7rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.controls {
+  display: flex;
+  gap: 0.6rem;
+  margin: 1.2rem 0 1.35rem;
+}
+
+.primary,
+.secondary {
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--ink);
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--ink);
+  color: var(--sheet);
+}
+
+.secondary {
+  background: transparent;
+  color: var(--ink);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 4px 4.6rem minmax(0, 1fr) 44px;
+  column-gap: 0.75rem;
+  align-items: start;
+  margin: 0 0 0.5rem;
+  padding: 0.8rem 0.65rem 0.8rem 0;
+  background: var(--line);
+}
+
+.lamp {
+  align-self: stretch;
+  background: transparent;
+}
+
+.is-active .lamp {
+  background: var(--lamp);
+  animation: lamp 1.2s ease-in-out infinite;
+}
+
+.who {
+  margin: 0.15rem 0 0;
+}
+
+.who ruby {
+  font-family: var(--jp);
+  font-size: 1rem;
+  font-weight: 700;
+  ruby-position: over;
+}
+
+.who rt,
+.jp rt,
+.example rt,
+.word rt {
+  font-size: 0.48em;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.zhou {
+  color: var(--zhou);
+}
+
+.sato {
+  color: var(--sato);
+}
+
+.jp {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.7rem 0 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-family: var(--jp);
+  font-size: 1.32rem;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  text-align: left;
+}
+
+.jp ruby,
+.example ruby,
+.word ruby {
+  ruby-position: over;
+}
+
+.zh,
+.missing {
+  margin: 0.5rem 0 0;
+  padding: 0.4rem 0.6rem;
+  background: var(--reveal);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.zh {
+  color: var(--ink);
+}
+
+.missing {
+  color: var(--muted);
+}
+
+.play {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid var(--muted);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.play[aria-pressed="true"] {
+  border-color: var(--lamp);
+  color: var(--lamp);
+}
+
+.notes {
+  margin-top: 1.6rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid #b7c4bd;
+}
+
+.notes h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.notes h3 {
+  margin: 1rem 0 0.45rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+.grammar,
+.words {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grammar li,
+.words li {
+  margin: 0 0 0.7rem;
+  padding: 0.7rem 0.75rem;
+  background: var(--line);
+}
+
+.pattern,
+.example,
+.word,
+.note-zh {
+  margin: 0;
+}
+
+.pattern,
+.example,
+.word {
+  font-family: var(--jp);
+}
+
+.pattern {
+  font-size: 1.05rem;
+}
+
+.example,
+.word {
+  margin-top: 0.35rem;
+  font-size: 1.05rem;
+  line-height: 1.45;
+  padding-top: 0.45rem;
+}
+
+.note-zh {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.words {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.words li {
+  margin: 0;
+}
+
+@keyframes lamp {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (max-width: 640px) {
+  .sheet {
+    margin: 0.75rem auto 2rem;
+    padding: 1.25rem 0.9rem 1.6rem;
+  }
+
+  h1 {
+    font-size: 1.55rem;
+  }
+
+  .jp {
+    font-size: 1.18rem;
+  }
+
+  .line {
+    grid-template-columns: 4px 3.6rem minmax(0, 1fr) 44px;
+    column-gap: 0.5rem;
+  }
+
+  .words {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-active .lamp {
+    animation: none;
+  }
+}
