@@ -1,7 +1,8 @@
-"""Synthesize one lesson's cached mp3 files with edge-tts.
+"""Synthesize cached mp3 files for every lesson with edge-tts.
 
 Run from anywhere:
 
+    python scripts/synthesize.py --check
     python scripts/synthesize.py
 """
 
@@ -15,26 +16,42 @@ from pathlib import Path
 import edge_tts
 
 ROOT = Path(__file__).resolve().parent.parent
-LESSON_PATH = ROOT / "content" / "lessons" / "01.json"
-AUDIO_DIR = ROOT / "public" / "audio" / "lesson-01"
+LESSON_DIR = ROOT / "content" / "lessons"
 PUNCTUATION = set(" \t\r\n。、，,.！？!?・…")
 
 
 def tokenize(text: str, whitelist: list[str]) -> str | None:
-    """Return the unmatched tail, or None when the line is fully allowed."""
+    """Return the unmatched tail, or None when the line is fully allowed.
+
+    Longer words are tried first, then shorter ones, so はい does not swallow
+    the は in はいます.
+    """
     words = sorted(set(whitelist), key=len, reverse=True)
     remaining = "".join(ch for ch in text if ch not in PUNCTUATION)
-    while remaining:
-        match = next((word for word in words if remaining.startswith(word)), None)
-        if match is None:
-            return remaining
-        remaining = remaining[len(match) :]
-    return None
+    furthest = 0
+    seen: dict[int, bool] = {}
 
+    def covers(index: int) -> bool:
+        nonlocal furthest
+        if index > furthest:
+            furthest = index
+        if index in seen:
+            return seen[index]
+        if index == len(remaining):
+            seen[index] = True
+            return True
+        ok = False
+        for word in words:
+            nxt = index + len(word)
+            if remaining.startswith(word, index) and covers(nxt):
+                ok = True
+                break
+        seen[index] = ok
+        return ok
 
-def load_lesson() -> dict:
-    with LESSON_PATH.open(encoding="utf-8") as handle:
-        return json.load(handle)
+    if covers(0):
+        return None
+    return remaining[furthest:]
 
 
 def squash(text: str) -> str:
@@ -71,31 +88,54 @@ def validate(lesson: dict) -> None:
         for index, item in enumerate(story["words"], start=1):
             check_reading(f"{story['id']} word {index}", item["parts"], whitelist, problems)
     if problems:
-        print("Lesson failed the grammar whitelist:", file=sys.stderr)
+        print(f"Lesson {lesson['id']} failed the grammar whitelist:", file=sys.stderr)
         for problem in problems:
             print(f"  {problem}", file=sys.stderr)
         raise SystemExit(1)
 
 
-async def synthesize_line(line: dict, voice: str, rate: str) -> None:
-    target = AUDIO_DIR / line["audio"]
+def load_lessons() -> list[dict]:
+    lessons = []
+    for path in sorted(LESSON_DIR.glob("*.json")):
+        with path.open(encoding="utf-8") as handle:
+            lessons.append(json.load(handle))
+    return lessons
+
+
+async def synthesize_line(line: dict, voice: str, rate: str, audio_dir: Path) -> None:
+    target = audio_dir / line["audio"]
+    if target.exists() and "--force" not in sys.argv:
+        print(f"keep {target.relative_to(ROOT)}")
+        return
     communicate = edge_tts.Communicate(line["speech"], voice, rate=rate)
     await communicate.save(str(target))
     print(f"wrote {target.relative_to(ROOT)}")
 
 
-async def main() -> None:
-    lesson = load_lesson()
-    validate(lesson)
-    AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+async def synthesize_lesson(lesson: dict) -> None:
+    audio_dir = ROOT / "public" / "audio" / f"lesson-{lesson['id']}"
+    audio_dir.mkdir(parents=True, exist_ok=True)
     rate = lesson.get("rate", "-5%")
-    if "--check" in sys.argv:
-        print("whitelist ok")
-        return
-    for story in lesson["stories"]:
-        for line in story["lines"]:
+    semaphore = asyncio.Semaphore(4)
+
+    async def one(line: dict) -> None:
+        async with semaphore:
             voice = lesson["speakers"][line["speaker"]]["voice"]
-            await synthesize_line(line, voice, rate)
+            await synthesize_line(line, voice, rate, audio_dir)
+
+    lines = [line for story in lesson["stories"] for line in story["lines"]]
+    await asyncio.gather(*(one(line) for line in lines))
+
+
+async def main() -> None:
+    lessons = load_lessons()
+    for lesson in lessons:
+        validate(lesson)
+    if "--check" in sys.argv:
+        print(f"whitelist ok ({len(lessons)} lessons)")
+        return
+    for lesson in lessons:
+        await synthesize_lesson(lesson)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,13 @@
 import { useRef, useState } from "react";
-import lesson from "../content/lessons/01.json";
+import course from "../content/course.json";
+import lesson01 from "../content/lessons/01.json";
+import lesson02 from "../content/lessons/02.json";
+import lesson03 from "../content/lessons/03.json";
+import lesson04 from "../content/lessons/04.json";
+import lesson05 from "../content/lessons/05.json";
 
-type SpeakerName = keyof typeof lesson.speakers;
+const lessons = [lesson01, lesson02, lesson03, lesson04, lesson05];
+const readyIds = new Set(lessons.map((item) => item.id));
 type Part = { t: string; r?: string };
 
 function PlayIcon() {
@@ -17,8 +23,11 @@ function Furigana({ parts }: { parts: readonly Part[] }) {
     <>
       {parts.map((part, index) =>
         part.r ? (
-          <ruby key={index}>
-            {part.t}
+          <ruby
+            key={index}
+            style={{ minWidth: `${Math.max(part.t.length, part.r.length * 0.52)}em` }}
+          >
+            <span className="rb">{part.t}</span>
             <rt>{part.r}</rt>
           </ruby>
         ) : (
@@ -30,6 +39,7 @@ function Furigana({ parts }: { parts: readonly Part[] }) {
 }
 
 export default function App() {
+  const [lessonIndex, setLessonIndex] = useState(0);
   const [storyIndex, setStoryIndex] = useState(0);
   const [openId, setOpenId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -38,7 +48,11 @@ export default function App() {
   const run = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lineRefs = useRef<Record<string, HTMLElement | null>>({});
+  const lesson = lessons[lessonIndex];
   const story = lesson.stories[storyIndex];
+  const catalog = course.units
+    .flatMap((unit) => unit.lessons.map((item) => ({ ...item, unitLabel: unit.label })))
+    .find((item) => item.id === lesson.id);
 
   function audioElement() {
     if (!audioRef.current) audioRef.current = new Audio();
@@ -55,6 +69,16 @@ export default function App() {
   function selectStory(index: number) {
     stop();
     setStoryIndex(index);
+    setOpenId(null);
+    setMissingId(null);
+  }
+
+  function selectLesson(id: string) {
+    const index = lessons.findIndex((item) => item.id === id);
+    if (index < 0) return;
+    stop();
+    setLessonIndex(index);
+    setStoryIndex(0);
     setOpenId(null);
     setMissingId(null);
   }
@@ -98,7 +122,7 @@ export default function App() {
       const line = lines[i];
       setActiveId(line.id);
       lineRefs.current[line.id]?.scrollIntoView({ block: "nearest" });
-      const ok = await playFile(`/audio/lesson-01/${line.audio}`, token);
+      const ok = await playFile(`/audio/lesson-${lesson.id}/${line.audio}`, token);
       if (run.current !== token) return;
       if (!ok) {
         setMissingId(line.id);
@@ -116,31 +140,51 @@ export default function App() {
   }
 
   return (
-    <main className="sheet">
-      <p className="eyebrow">
-        {lesson.course} · 第 {lesson.lesson} 课
-      </p>
-      <div className="pager" role="tablist" aria-label="故事">
-        {lesson.stories.map((item, index) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            id={`story-tab-${item.id}`}
-            aria-selected={index === storyIndex}
-            aria-controls={`story-panel-${item.id}`}
-            onClick={() => selectStory(index)}
-          >
-            {item.label}
-          </button>
+    <div className="app">
+      <nav className="sidebar" aria-label="课程">
+        <p className="sidebar-course">{course.course}</p>
+        {course.units.map((unit) => (
+          <section key={unit.id} className="unit" aria-label={unit.label}>
+            <p className="unit-label">{unit.label}</p>
+            <ul className="unit-lessons">
+              {unit.lessons.map((item) => {
+                const ready = readyIds.has(item.id);
+                const current = item.id === lesson.id;
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className="nav-lesson"
+                      aria-current={current ? "page" : undefined}
+                      disabled={!ready}
+                      onClick={() => selectLesson(item.id)}
+                    >
+                      <span className="nav-no">第{item.lesson}课</span>
+                      <span className="nav-title" lang="ja">
+                        <Furigana parts={item.bookTitle} />
+                      </span>
+                      {ready ? null : <span className="nav-soon">还没写</span>}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         ))}
-      </div>
-      <section
+      </nav>
+      <main className="paper">
+      <p className="eyebrow">
+        {course.course} / {catalog?.unitLabel} / 第{lesson.lesson}课
+      </p>
+      <h1 className="book-title" lang="ja">
+        <Furigana parts={catalog?.bookTitle ?? []} />
+      </h1>
+      <div
         role="tabpanel"
-        id={`story-panel-${story.id}`}
-        aria-labelledby={`story-tab-${story.id}`}
+        id={`story-panel-${lesson.id}-${story.id}`}
+        aria-labelledby={`story-tab-${lesson.id}-${story.id}`}
       >
-        <h1>{story.title}</h1>
+        <h2 className="story-heading">{story.title}</h2>
         <p className="scene">{story.scene}</p>
         <p className="hint">点句子可以看这句中文。注音标在汉字上面。</p>
         <div className="controls">
@@ -153,7 +197,7 @@ export default function App() {
         </div>
         <div className="lines">
           {story.lines.map((line, index) => {
-            const speaker = lesson.speakers[line.speaker as SpeakerName];
+            const speaker = lesson.speakers[line.speaker as keyof typeof lesson.speakers];
             const open = openId === line.id;
             const active = activeId === line.id;
             return (
@@ -167,8 +211,8 @@ export default function App() {
               >
                 <span className="lamp" aria-hidden="true" />
                 <p className={line.speaker === "周" ? "who zhou" : "who sato"}>
-                  <ruby>
-                    {line.speaker}
+                  <ruby style={{ minWidth: `${Math.max(line.speaker.length, speaker.reading.length * 0.52)}em` }}>
+                    <span className="rb">{line.speaker}</span>
                     <rt>{speaker.reading}</rt>
                   </ruby>
                 </p>
@@ -205,6 +249,26 @@ export default function App() {
             );
           })}
         </div>
+      </div>
+    </main>
+      <aside className="dossier">
+        <div className="dossier-main">
+          <p className="dossier-kicker">STORY</p>
+          <div className="pager" role="tablist" aria-label="这一课的故事">
+            {lesson.stories.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                id={`story-tab-${lesson.id}-${item.id}`}
+                aria-selected={index === storyIndex}
+                aria-controls={`story-panel-${lesson.id}-${item.id}`}
+                onClick={() => selectStory(index)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         <section className="notes" aria-label="本则整理">
           <h2>本则整理</h2>
           <h3>语法</h3>
@@ -233,7 +297,11 @@ export default function App() {
             ))}
           </ul>
         </section>
-      </section>
-    </main>
+        </div>
+        <p className="vert-index">
+          {catalog?.unitLabel} 第{lesson.lesson}课 {story.label}
+        </p>
+      </aside>
+    </div>
   );
 }

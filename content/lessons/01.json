@@ -2,6 +2,7 @@
   "id": "01",
   "course": "初级上",
   "lesson": 1,
+  "name": "是谁",
   "pauseMs": 400,
   "rate": "-5%",
   "whitelist": [
